@@ -97,5 +97,5 @@ Lisan Al Ghaib
 
 [Opio en las nubes](https://www.youtube.com/watch?v=bNHFmvUw9Bw)
 
-<h1 align="right"> si está leyendo esto es porque o me quiere o me estalkea</h1>
-<h1 align="right"> vayase a leer mis repositories más serios que este es de parche que lo tengo a lo bien</h1>
+<h3 align="right"> si está leyendo esto es porque o me quiere o me estalkea</h3>
+<h3 align="right"> vayase a leer mis repositories más serios que este es de parche que lo tengo a lo bien</h3>

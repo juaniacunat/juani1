@@ -19,14 +19,11 @@ PERSONAS <- list(
 
 ARCHIVO_SALIDA = "frases_politicos.xlsx"
 
-# User-agent para evitar bloqueos básicos
 UA <- paste0(
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ",
   "AppleWebKit/537.36 (KHTML, like Gecko) ",
   "Chrome/124.0.0.0 Safari/537.36"
 )
-
-# ── Función auxiliar: GET con reintentos ────────────────────
 
 safe_get <- function(url, n_intentos = 3, pausa = 2) {
   for (i in seq_len(n_intentos)) {
@@ -44,24 +41,17 @@ safe_get <- function(url, n_intentos = 3, pausa = 2) {
   NULL
 }
 
-# ── Función: extraer párrafos que mencionan a la persona ────
-
 extraer_frases <- function(html_nodo, nombre_buscado) {
-  # Párrafos del cuerpo del artículo (CORREGIDO: sin comillas)
   parrafos <- html_nodo |>
     html_elements("p, blockquote") |>
     html_text2()
-  
-  # Filtrar solo los que contienen el nombre
-  apellido <- word(nombre_buscado, -1)          # último apellido
+    apellido <- word(nombre_buscado, -1)          # último apellido
   patron   <- str_c(apellido, collapse = "|")   # CORREGIDO: sin comillas
   
   parrafos |>
     keep(~ str_detect(.x, regex(patron, ignore_case = TRUE))) |>
     keep(~ nchar(.x) > 60)                       # descartar fragmentos muy cortos
 }
-
-# ── 1. El Espectador ────────────────────────────────────────
 
 scrape_espectador <- function(termino_busqueda) {
   message("\n── El Espectador: '", termino_busqueda, "'")
@@ -73,7 +63,6 @@ scrape_espectador <- function(termino_busqueda) {
   
   pagina <- read_html(content(resp, "text", encoding = "UTF-8"))
   
-  # Extraer links de resultados
   links <- pagina |>
     html_elements("a[href]") |>
     html_attr("href") |>
@@ -116,7 +105,6 @@ scrape_espectador <- function(termino_busqueda) {
   resultados
 }
 
-# ── 2. Semana ───────────────────────────────────────────────
 
 scrape_semana <- function(termino_busqueda) {
   message("\n── Semana: '", termino_busqueda, "'")
@@ -167,7 +155,6 @@ scrape_semana <- function(termino_busqueda) {
   resultados
 }
 
-# ── 3. Infobae Colombia ─────────────────────────────────────
 
 scrape_infobae <- function(termino_busqueda) {
   message("\n── Infobae Colombia: '", termino_busqueda, "'")
@@ -219,7 +206,6 @@ scrape_infobae <- function(termino_busqueda) {
   resultados
 }
 
-# ── 4. El Tiempo ────────────────────────────────────────────
 
 scrape_eltiempo <- function(termino_busqueda) {
   message("\n── El Tiempo: '", termino_busqueda, "'")
@@ -268,9 +254,6 @@ scrape_eltiempo <- function(termino_busqueda) {
   resultados
 }
 
-# ══════════════════════════════════════════════════════════════
-#  LOOP PRINCIPAL
-# ══════════════════════════════════════════════════════════════
 
 scrapers <- list(
   scrape_espectador,
@@ -303,7 +286,6 @@ todos_los_resultados <- map_dfr(PERSONAS, function(persona) {
     mutate(persona = persona$nombre, .before = 1)
 })
 
-# ── Limpieza final con Validación de Seguridad ──────────────────────────
 
 if (nrow(todos_los_resultados) > 0 && "fragmento" %in% colnames(todos_los_resultados)) {
   todos_los_resultados <- todos_los_resultados |>
@@ -318,20 +300,8 @@ if (nrow(todos_los_resultados) > 0 && "fragmento" %in% colnames(todos_los_result
   stop("❌ No se encontraron fragmentos ni noticias válidas para ninguna persona. Revisa el código o la conexión.")
 }
 
-# ── Reporte en consola ──────────────────────────────────────
-
-message("\n\n=== RESUMEN ===")
-todos_los_resultados |>
-  count(persona, medio) |>
-  print()
-
-# ══════════════════════════════════════════════════════════════
-#  EXPORTAR A EXCEL
-# ══════════════════════════════════════════════════════════════
-
 wb <- createWorkbook()
 
-# Estilos
 estilo_encabezado <- createStyle(
   fontName      = "Arial",
   fontSize      = 11,
@@ -360,7 +330,6 @@ estilo_normal <- createStyle(
   wrapText = TRUE
 )
 
-# CORREGIDO: textDecoration = "underline" en lugar de underline = TRUE
 estilo_link <- createStyle(
   fontName   = "Arial",
   fontSize   = 10,
@@ -372,8 +341,6 @@ colores_personas <- c(
   "Abelardo de la Espriella" = "#E2EFDA",
   "Iván Cepeda"              = "#FCE4D6"
 )
-
-# ── Hoja 1: Todos los resultados ────────────────────────────
 
 addWorksheet(wb, "Todos los resultados")
 
@@ -388,7 +355,6 @@ addStyle(wb, "Todos los resultados",
          estilo_encabezado,
          rows = 1, cols = 1:6, gridExpand = TRUE)
 
-# Datos
 df_export <- todos_los_resultados |>
   select(persona, medio, fecha, titulo, fragmento, url)
 
@@ -396,7 +362,7 @@ writeData(wb, "Todos los resultados",
           df_export,
           startRow = 2, colNames = FALSE)
 
-# Colorear filas por persona
+
 for (i in seq_len(nrow(df_export))) {
   persona_i <- df_export$persona[i]
   color_i   <- colores_personas[persona_i]
@@ -408,7 +374,6 @@ for (i in seq_len(nrow(df_export))) {
                        fgFill = color_i),
            rows = fila_excel, cols = 1:5, gridExpand = TRUE, stack = FALSE)
   
-  # CORREGIDO: textDecoration = "underline" en el bucle
   addStyle(wb, "Todos los resultados",
            createStyle(fontName = "Arial", fontSize = 10,
                        fontColour = "#0563C1", textDecoration = "underline", 
@@ -416,17 +381,13 @@ for (i in seq_len(nrow(df_export))) {
            rows = fila_excel, cols = 6, gridExpand = TRUE)
 }
 
-# Anchos de columna
 setColWidths(wb, "Todos los resultados",
              cols = 1:6,
              widths = c(25, 18, 15, 35, 60, 50))
 
 freezePane(wb, "Todos los resultados", firstRow = TRUE)
 
-# Filtros
 addFilter(wb, "Todos los resultados", row = 1, cols = 1:6)
-
-# ── Hojas individuales por persona ──────────────────────────
 
 for (persona in unique(df_export$persona)) {
   nombre_hoja <- str_trunc(persona, 31)  # Excel límita a 31 chars
@@ -466,8 +427,6 @@ for (persona in unique(df_export$persona)) {
   addFilter(wb, nombre_hoja, row = 1, cols = 1:5)
 }
 
-# ── Hoja de metadata ────────────────────────────────────────
-
 addWorksheet(wb, "Metadata")
 
 meta <- data.frame(
@@ -491,8 +450,4 @@ addStyle(wb, "Metadata",
 
 setColWidths(wb, "Metadata", cols = 1:2, widths = c(22, 60))
 
-# ── Guardar ─────────────────────────────────────────────────
-
 saveWorkbook(wb, ARCHIVO_SALIDA, overwrite = TRUE)
-message("\n✅ Archivo guardado: ", ARCHIVO_SALIDA)
-message("   Filas totales  : ", nrow(todos_los_resultados))
